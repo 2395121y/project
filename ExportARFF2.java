@@ -12,6 +12,9 @@ import java.util.Collections;
 import java.util.StringTokenizer;
 import java.util.zip.GZIPInputStream;
 
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+
 import weka.core.Instances;
 import weka.core.converters.ArffLoader;
 import weka.core.converters.ConverterUtils;
@@ -54,12 +57,14 @@ public class ExportARFF2 {
 		ArrayList<ArrayList<String>> arrayListScenario = new ArrayList<ArrayList<String>> ();
 		//ArrayList<ArrayList<BigInteger>> continuingNewsIDList = new ArrayList<ArrayList<BigInteger>>();
 		ArrayList<BigInteger> continuingNewsID = new ArrayList<BigInteger>();
+		ArrayList<BigInteger> completeID = new ArrayList<BigInteger>();
 		ArrayList<ArrayList<ArrayList>> arffListComplete = new ArrayList<ArrayList<ArrayList>>();
 		//ArrayList<ArrayList<String>> wordListComplete = new ArrayList<ArrayList<String>> ();
-		ArrayList<ArrayList<Integer>> wordLexiconListComplete = new ArrayList<ArrayList<Integer>>();
-		ArrayList<ArrayList<Integer>> tweetListComplete = new ArrayList<ArrayList<Integer>>();
-		
-		
+		ArrayList<String> wordList = new ArrayList<String>();
+		ArrayList<Integer> wordLexiconList = new ArrayList<Integer>();
+		ArrayList<Integer> tweetList = new ArrayList<Integer>();
+
+
 
 		// How many scenarios are you loading? Change amount for SteppingStone!
 		int steppingStone;
@@ -74,14 +79,14 @@ public class ExportARFF2 {
 				try
 				{
 					BufferedReader br= new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(file))));
-					
+
 					String line;					
 					boolean foundFlood = false;
-					
+
 					if (steppingStone %2 != 1 || steppingStone == 0)
 						foundFlood = true;
 					//boolean isItContinue = false;
-					
+
 
 					BigInteger possibleID = new BigInteger("0");
 					while ((line = br.readLine())!=null) {
@@ -93,30 +98,30 @@ public class ExportARFF2 {
 							// For simplification testing!
 							if (line.equals("{\"eventid\": \"flSchoolShooting2018\","))
 								foundFlood = false;							
-							
+
 							if (line.equals("{\"eventid\": \"chileEarthquake2014\","))
 								foundFlood = false;
-							
+
 							if (line.equals("{\"eventid\": \"joplinTornado2011\","))
 								foundFlood = true;
 
 							if (line.equals("{\"eventid\": \"typhoonYolanda2013\","))
 								foundFlood = false;
-							
+
 							if (line.equals("{\"eventid\": \"philipinnesFloods2012\","))
 								foundFlood = false;
-							
+
 							if (line.equals("{\"eventid\": \"albertaFloods2013\","))
 								foundFlood = false;
-							
+
 							//if (line.equals("{\"eventid\": \"typhoonYolanda2013\","))
 							//	foundFlood = true;
 							break;
-							
+
 						case 1:							
 							if (line.equals("{\"eventid\": \"philipinnesFloods2012\","))
 								foundFlood = true;
-							
+
 							if (line.equals("{\"eventid\": \"albertaFloods2013\","))
 								foundFlood = false;
 							/*
@@ -125,9 +130,9 @@ public class ExportARFF2 {
 
 							if (line.equals("{\"eventid\": \"typhoonYolanda2013\","))
 								foundFlood = false;
-								*/
+							 */
 							break;
-							
+
 						case 2:
 							if (line.equals("{\"eventid\": \"guatemalaEarthquake2012\","))
 								foundFlood = false;
@@ -364,15 +369,17 @@ public class ExportARFF2 {
 									continuingNewsID.add(possibleID);		
 								//bwa.write(String.valueOf(possibleID) + "\n");
 							}
+							
+							completeID.add(possibleID);
 						}
-						
+
 						/*
 						if (foundFlood)
 							System.out.println("True");
 						else
 							System.out.println("False");
-						*/
-						
+						 */
+
 						/*
 						if (steppingStone == 0)
 						{
@@ -585,10 +592,10 @@ public class ExportARFF2 {
 				}
 				catch (Exception e) { e.printStackTrace(); }
 			}	
-			
+
 			System.out.println("Next one...");
 		}
-		
+
 		//bwa.close();
 		/*
 			try {
@@ -622,25 +629,25 @@ public class ExportARFF2 {
 
 		//ArrayList<String> continuingNewsList = new ArrayList<String>();
 		int tokenCountTotal = 0;
-
+		int tweetCount = 0;
 		steppingStone = 0;
-		
+
 		//BufferedWriter bwb = new BufferedWriter(new FileWriter("FullIDs1.txt"));
 
 		for (steppingStone = 0; steppingStone < 2; steppingStone++)
 		{
 			//String justATest;
-			
+
 			//if (steppingStone == 0)
 			//	justATest = "JoplinTrainURL2.txt";
 			//else
 			//	justATest = "JoplinTestURL2.txt";
-			
+
 			//BufferedWriter baa = new BufferedWriter(new FileWriter(justATest));
-			
+
 			System.out.println("Stepping Stone No." + steppingStone);
 			String[] files2;
-			
+
 			//if (steppingStone == 1)
 			//	System.out.println("The size is: " + continuingNewsIDList.get(steppingStone).size());
 
@@ -762,12 +769,11 @@ public class ExportARFF2 {
 			 */
 
 			ArrayList<ArrayList> arffList = new ArrayList<ArrayList>();		
-			ArrayList<String> wordList = new ArrayList<String>();
-			ArrayList<Integer> wordLexiconList = new ArrayList<Integer>();
-			ArrayList<Integer> tweetList = new ArrayList<Integer>();
 
-			int tweetCount = 0;
+
+
 			int nextFile = 0;
+			JSONParser parser = new JSONParser();
 
 			for (String file : files2) {
 				{
@@ -778,194 +784,133 @@ public class ExportARFF2 {
 
 						while ((line = br.readLine())!=null) {
 
-							boolean continuingNews = false;
-							boolean isVerified = false;
-							boolean hasMedia = false;
-							boolean userDescription = false;
-
-							ArrayList<String> repeatedTokens = new ArrayList<String>();
-							String [] extractTextString = line.split("\"text\":\"");							
-							String [] extractActualTextString = extractTextString[1].split("\",\"");							
-							String actualText = extractActualTextString[0];
-							StringTokenizer textTokenizer = new StringTokenizer(extractActualTextString[0]);
-
-							String [] extractVerifiedString = line.split("\"verified\":");							
-							String [] extractVerifiedTextString = extractVerifiedString[1].split(",");	
-
-							String [] extractIDString = line.split("\"id_str\":");
 							
-							String [] extractActualIDString = extractIDString[1].split(",");
-							extractActualIDString[0] = extractActualIDString[0].substring(1, extractActualIDString[0].length()-1);
-
-							//if extractActualIDString[0].contains("}")
-							int counti = 2;
-							int countii = 2;
-							
-							//if (steppingStone == 1)
-							//{
-							//	System.out.println(extractActualIDString[0]);
-							//}
-
-							while ((extractActualIDString[0].contains("}")) || (extractActualIDString[0].contains("\"")))
+							JSONObject obj = (JSONObject) parser.parse(line);
+							String extractID = (String) obj.get("id_str");
+							BigInteger testID = new BigInteger (extractID);
+							if (completeID.contains(testID))
 							{
-								//if (steppingStone == 1)
-								//{
-								//	System.out.println(extractActualIDString[0]);
-								//}
+								tweetCount++;
+								boolean continuingNews = false;
+								boolean isVerified = false;
+								boolean hasMedia = false;
+								boolean userDescription = false;
+	
+								ArrayList<String> repeatedTokens = new ArrayList<String>();
 								
-								if (counti == extractActualIDString.length)
-								{
-									counti = 2;
-									extractActualIDString = extractIDString[countii].split(",");
-									extractActualIDString[0] = extractActualIDString[0].substring(1, extractActualIDString[0].length()-1);
-									countii++;
-								}
+								String actualText = (String) obj.get("text");
+								//System.out.println(actualText);
+								StringTokenizer textTokenizer = new StringTokenizer(actualText);
+								JSONObject userProfile = (JSONObject) obj.get("user");
+								isVerified = (boolean) userProfile.get("verified");								
+								
+								if (continuingNewsID.contains(testID))
+									continuingNews = true;
 								else
-								{
-									//System.out.println(extractActualIDString[0]);
-									extractActualIDString = extractIDString[counti].split(",");
-									//System.out.println(extractActualIDString[0]);
-									counti++;
-									extractActualIDString[0] = extractActualIDString[0].substring(1, extractActualIDString[0].length()-1);
-								}
-								
-							}
-							
-							//if (steppingStone == 1)
-							//{
-							//	System.out.println(extractActualIDString[0]);
-							//}
+									continuingNews = false;
+	
+								if (line.contains("media_url"))
+									hasMedia = true;
+	
+								String userDesc = (String) userProfile.get("description");
+								userDesc.toLowerCase();																				
+	
+								ArrayList arr = new ArrayList();
+								while (textTokenizer.hasMoreTokens()) {
+									String token = TextUtils.normaliseString(textTokenizer.nextToken());
 
+									if (token!=null && token.length()>0) {
+										tokenCountTotal++;
 
-							BigInteger testID = new BigInteger (extractActualIDString[0]);
-							//bwb.write(String.valueOf(testID) + "\n");
-														
-							//if (steppingStone == 1)
-							//	System.out.println(testID);
-							
-
-							if (continuingNewsID.contains(testID))
-								continuingNews = true;
-							else
-								continuingNews = false;
-
-							if (line.contains("media_url"))
-								hasMedia = true;
-
-
-							String [] descriptionString = line.split("\"user\":");
-							String [] descriptionTextString = descriptionString[1].split("\"description\":\"");	
-							String [] descriptionTextString2 = descriptionTextString[1].split("\",");
-							descriptionTextString2[0].toLowerCase();
-							//System.out.println(descriptionTextString2[0]);						
-
-							if (extractVerifiedTextString[0].equals("true"))
-								isVerified = true;
-							else
-								isVerified = false;
-
-							ArrayList arr = new ArrayList();	
-							
-							
-							//if (continuingNews && steppingStone == 1)
-							//	System.out.println(extractActualTextString[0]);
-							
-							//wordCountList.add(textTokenizer.countTokens());
-							while (textTokenizer.hasMoreTokens()) {
-								String token = TextUtils.normaliseString(textTokenizer.nextToken());
-
-								if (token!=null && token.length()>0) {
-									tokenCountTotal++;
-
-									if (token.startsWith("http"))
-									{
-										try
+										if (token.startsWith("http"))
 										{
-										//System.out.println(token);
-										//baa.write("File #" + nextFile + " \n");
-										//baa.write("Original URL: " + token + "\n");
-										String realString = new String();
-										realString = UrlCleaner.unshortenUrl(token);
-										//baa.write("New URL: " + realString + "\n");
-										//baa.write("\n");
-										StringTokenizer textTokenizerURL = new StringTokenizer(realString);
-										//int indexWordCount = wordCountList.get(tweetCount);
-										//wordCountList.set(tweetCount, indexWordCount - 1 + textTokenizerURL.countTokens());
-										//String [] testURL = token.split("//");
-										//System.out.println(testURL[1]);
-										//String [] testURL2 = realString.split("//");
-										//System.out.println(testURL2[1]);
-										//if (!testURL[1].equals(testURL2[1]))
-										//	System.out.println(testURL2[1]);
-
-										String tokenURL = TextUtils.normaliseStringIgnore(textTokenizerURL.nextToken());
-										String [] tokensURL = tokenURL.split(" ");
-
-										for (int i = 0; i < tokensURL.length; i++)
-										{	
-											if (tokensURL[i]!=null && tokensURL[i].length()>0 && lexiconList.contains(tokensURL[i]) && !wordList.contains(tokensURL[i]))
+											try
 											{
-												wordList.add(tokensURL[i]);
+												//System.out.println(token);
+												//baa.write("File #" + nextFile + " \n");
+												//baa.write("Original URL: " + token + "\n");
+												String realString = new String();
+												realString = UrlCleaner.unshortenUrl(token);
+												//baa.write("New URL: " + realString + "\n");
+												//baa.write("\n");
+												StringTokenizer textTokenizerURL = new StringTokenizer(realString);
+												//int indexWordCount = wordCountList.get(tweetCount);
+												//wordCountList.set(tweetCount, indexWordCount - 1 + textTokenizerURL.countTokens());
+												//String [] testURL = token.split("//");
+												//System.out.println(testURL[1]);
+												//String [] testURL2 = realString.split("//");
+												//System.out.println(testURL2[1]);
+												//if (!testURL[1].equals(testURL2[1]))
+												//	System.out.println(testURL2[1]);
+
+												String tokenURL = TextUtils.normaliseStringIgnore(textTokenizerURL.nextToken());
+												String [] tokensURL = tokenURL.split(" ");
+
+												for (int i = 0; i < tokensURL.length; i++)
+												{	
+													if (tokensURL[i]!=null && tokensURL[i].length()>0 && lexiconList.contains(tokensURL[i]) && !wordList.contains(tokensURL[i]))
+													{
+														wordList.add(tokensURL[i]);
+														//wordCountList.add(1);
+														tweetList.add(1);
+														wordLexiconList.add(lexiconList.indexOf(tokensURL[i]));
+													}
+													else if (wordList.contains(tokensURL[i]))
+													{
+														int indexToken = wordList.indexOf(tokensURL[i]);
+														//int currentCount = wordCountList.get(indexToken);
+														//wordCountList.set(indexToken, currentCount + 1);
+
+														if (!repeatedTokens.contains(tokensURL[i]))
+														{
+															repeatedTokens.add(tokensURL[i]);
+															int currentCountTweet = tweetList.get(indexToken);
+															tweetList.set(indexToken, currentCountTweet + 1);
+														}
+													}
+												}
+											}
+											catch (Exception e)
+											{
+												e.printStackTrace();
+												//baa.write("ERROR: " + e.getMessage() + "\n");
+												//baa.write("\n");
+											}
+										}										
+										else if (lexiconList.contains(token))
+										{
+											//System.out.print(lexiconList.indexOf(token)+1 + " ");
+											arr.add(lexiconList.indexOf(token));
+
+											if (!wordList.contains(token))
+											{
+												wordList.add(token);
 												//wordCountList.add(1);
 												tweetList.add(1);
-												wordLexiconList.add(lexiconList.indexOf(tokensURL[i]));
+												wordLexiconList.add(lexiconList.indexOf(token));
 											}
-											else if (wordList.contains(tokensURL[i]))
+											else
 											{
-												int indexToken = wordList.indexOf(tokensURL[i]);
+												int indexToken = wordList.indexOf(token);
 												//int currentCount = wordCountList.get(indexToken);
 												//wordCountList.set(indexToken, currentCount + 1);
 
-												if (!repeatedTokens.contains(tokensURL[i]))
+												if (!repeatedTokens.contains(token))
 												{
-													repeatedTokens.add(tokensURL[i]);
+													repeatedTokens.add(token);
 													int currentCountTweet = tweetList.get(indexToken);
 													tweetList.set(indexToken, currentCountTweet + 1);
 												}
 											}
-										}
-										}
-										catch (Exception e)
-										{
-											e.printStackTrace();
-											//baa.write("ERROR: " + e.getMessage() + "\n");
-											//baa.write("\n");
-										}
-									}										
-									else if (lexiconList.contains(token))
-									{
-										//System.out.print(lexiconList.indexOf(token)+1 + " ");
-										arr.add(lexiconList.indexOf(token));
 
-										if (!wordList.contains(token))
-										{
-											wordList.add(token);
-											//wordCountList.add(1);
-											tweetList.add(1);
-											wordLexiconList.add(lexiconList.indexOf(token));
-										}
-										else
-										{
-											int indexToken = wordList.indexOf(token);
-											//int currentCount = wordCountList.get(indexToken);
-											//wordCountList.set(indexToken, currentCount + 1);
+											//if (continuingNews)
+											//	System.out.println(descriptionTextString2[0]);
 
-											if (!repeatedTokens.contains(token))
-											{
-												repeatedTokens.add(token);
-												int currentCountTweet = tweetList.get(indexToken);
-												tweetList.set(indexToken, currentCountTweet + 1);
-											}
-										}
-
-										//if (continuingNews)
-										//	System.out.println(descriptionTextString2[0]);
-
-										if ( (descriptionTextString2[0].contains("news")) || (descriptionTextString2[0].contains("journalism")) 
-												|| (descriptionTextString2[0].contains("blogger")) || (descriptionTextString2[0].contains("coverage"))
-												|| (descriptionTextString2[0].contains("global")))
-											userDescription = true;
-										/*
+											if ( (userDesc.contains("news")) || (userDesc.contains("journalism")) 
+													|| (userDesc.contains("blogger")) || (userDesc.contains("coverage"))
+													|| (userDesc.contains("global")))
+												userDescription = true;
+											/*
 										if (continuingNews)
 										{
 											if (!wordList.contains(token))
@@ -981,159 +926,109 @@ public class ExportARFF2 {
 												wordCountList.set(indexToken, currentCount + 1);
 											}
 										}
-										 */
-									}																		
-								}							
-							}
+											 */
+										}																		
+									}							
+								}
 
-							Collections.sort(arr);
+								Collections.sort(arr);
 
-							if (isVerified)
-								arr.add("verified");
-							else
-								arr.add("notverified");
+								if (isVerified)
+									arr.add("verified");
+								else
+									arr.add("notverified");
 
-							if (hasMedia)
-								arr.add("hasmedia");
-							else
-								arr.add("nomedia");
+								if (hasMedia)
+									arr.add("hasmedia");
+								else
+									arr.add("nomedia");
 
-							if (userDescription)
-								arr.add("desc");
-							else
-								arr.add("notdesc");
-
-
-							if (continuingNews)
-								arr.add("continuingnews");
-							else
-								arr.add("notcontinuingnews");
-
-							//System.out.println();
+								if (userDescription)
+									arr.add("desc");
+								else
+									arr.add("notdesc");
 
 
-							/*
+								if (continuingNews)
+									arr.add("continuingnews");
+								else
+									arr.add("notcontinuingnews");
+
+								//System.out.println();
+
+
+								/*
 							if (continuingNews)
 								arr.add("donations");
 							else
 								arr.add("notdonations");
-							 */
+								 */
 
-							/*
+								/*
 							if (continuingNews)
 								arr.add("official");
 							else
 								arr.add("notofficial");
-							 */
+								 */
 
-							/*
+								/*
 							if (continuingNews)
 								arr.add("advice");
 							else
 								arr.add("notadvice");
-							 */
+								 */
 
-							/*
+								/*
 							if (continuingNews)
 								arr.add("multi");
 							else
 								arr.add("notmulti");
-							 */
+								 */
 
-							/*
+								/*
 							if (continuingNews)
 								arr.add("goods");
 							else
 								arr.add("notgoods");
-							 */
+								 */
 
-							arffList.add(arr);
-							tweetCount++;
+								arffList.add(arr);
+								
 
-							//System.out.println(arr);
+								//System.out.println(arr);
 
+							}
 						}
 						br.close();
-						
+
 					} catch (Exception e) { e.printStackTrace(); }
 					nextFile++;
 				}
 			}
 			arffListComplete.add(arffList);
 			//wordListComplete.add(wordList);
-			wordLexiconListComplete.add(wordLexiconList);
-			tweetListComplete.add(tweetList);
+
 			//baa.close();
 		}
-		
+
 		/*
 		BufferedWriter wrt = new BufferedWriter(new FileWriter("WordTweetLong.txt"));
-		
+
 		for (int as = 0; as < 2; as++)
 		{
 			for (int bs = 0; bs < tweetListComplete.get(as).size(); bs++)
 			{
 				wrt.write(String.valueOf(wordLexiconListComplete.get(as).get(bs)) + "\t : " + tweetListComplete.get(as).get(bs) + "\n");
 			}
-			
+
 			wrt.write("\n");
 		}
-		
+
 		wrt.close();
-		*/
-		
-		ArrayList<Integer> wordTempoList = new ArrayList<Integer>();
-		ArrayList<Integer> tweetTempoList = new ArrayList<Integer>();
-		
-		wordTempoList = wordLexiconListComplete.get(0);
-		tweetTempoList = tweetListComplete.get(0);
-		
-		for (int abc = 0; abc < wordLexiconListComplete.get(1).size(); abc++)
-		{
-			if( wordTempoList.contains(wordLexiconListComplete.get(1).get(abc)))
-			{
-				int indexes = wordTempoList.indexOf(wordLexiconListComplete.get(1).get(abc));
-				int originalNo = tweetTempoList.get(indexes);
-				tweetTempoList.set(indexes, originalNo + tweetListComplete.get(1).get(abc));
-			}
-			else
-			{
-				wordTempoList.add(wordLexiconListComplete.get(1).get(abc));
-				tweetTempoList.add(tweetListComplete.get(1).get(abc));
-			}
-		}
-		
-		for (int sorting = 0; sorting < wordTempoList.size() - 1; sorting++)
-		{
-			int firstNo = wordTempoList.get(sorting);
-			int firstTweet = tweetTempoList.get(sorting);
-			int swapNo = sorting;
-			int wordSwap = wordTempoList.get(sorting);
-			int tweetSwap = tweetTempoList.get(sorting);
-			
-			for (int sortinga = sorting + 1; sortinga < wordTempoList.size(); sortinga++)
-			{
-				if (wordSwap < wordTempoList.get(sortinga))
-				{
-					swapNo = sortinga;
-					wordSwap = wordTempoList.get(sortinga);
-					tweetSwap = tweetTempoList.get(sortinga);
-				}
-			}
-			
-			wordTempoList.set(sorting, wordTempoList.get(swapNo));
-			tweetTempoList.set(sorting, tweetTempoList.get(swapNo));
-			wordTempoList.set(swapNo, firstNo);
-			tweetTempoList.set(swapNo, firstTweet);
-		}
-		
-		BufferedWriter wrt = new BufferedWriter(new FileWriter("WordTweetLongSort.txt"));
-		
-		for (int as = 0; as < wordTempoList.size(); as++)			
-			wrt.write(String.valueOf(wordTempoList.get(as)) + "\t : " + String.valueOf(tweetTempoList.get(as)) + "\n");	
-		
-		wrt.close();
-		
+		 */
+
+
+
 		//bwb.close();
 		/*
 			for (int a = 0; a < wordList.size(); a++)
@@ -1268,7 +1163,7 @@ public class ExportARFF2 {
 					}
 
 				}
-				*/
+				 */
 				/*
 				if (steppingStone == 0)
 					whatToWrite = "ContinuingNewsTFIDFTrainPhilippines.arff";
@@ -1319,11 +1214,11 @@ public class ExportARFF2 {
 							bw.write(String.valueOf(no));
 							bw.write("\t");
 
-							int wordIndex = wordLexiconListComplete.get(liveCount).indexOf(no);
+							int wordIndex = wordLexiconList.indexOf(no);
 
 							// TF IDF 1 
 							double tf = 1.0 * Collections.frequency(arffListComplete.get(liveCount).get(i), no);
-							double idf = Math.log(1.0 * arffListComplete.get(liveCount).size() / tweetListComplete.get(liveCount).get(wordIndex));
+							double idf = Math.log(1.0 * tweetCount / tweetList.get(wordIndex));
 							double tfidf = tf*idf;
 
 							// TF IDF 2
@@ -1472,12 +1367,11 @@ public class ExportARFF2 {
 							bw.write(String.valueOf(no));
 							bw.write("\t");
 
-							int wordIndex = wordLexiconListComplete.get(liveCount).indexOf(no);
+							int wordIndex = wordLexiconList.indexOf(no);
 
 							// TF IDF 1 
-							double tf = 1.0 * Collections.frequency(arffListComplete.get(liveCount).get(i), no);
-							System.out.println(i);
-							double idf = Math.log(1.0 * arffListComplete.get(liveCount).size() / tweetListComplete.get(liveCount).get(wordIndex));
+							double tf = 1.0 * Collections.frequency(arffListComplete.get(liveCount).get(i), no);							
+							double idf = Math.log(1.0 * tweetCount / tweetList.get(wordIndex));
 							double tfidf = tf*idf;							
 							tfidf = Math.round(tfidf * 100.0) / 100.0;
 							bw.write(String.valueOf(tfidf) + ",");							
@@ -1503,11 +1397,11 @@ public class ExportARFF2 {
 					else
 						bw.write("\"notcontinuingnews\"}" + "\n");
 
-					
+
 				}	
 				bw.close();
 				liveCount++;
-				
+
 			} catch (Exception e) {e.printStackTrace();}
 		}
 
@@ -1517,67 +1411,67 @@ public class ExportARFF2 {
 			String trainingData;
 			String testData;
 			String resultText;
-			
+
 			switch (steppingStone)
 			{
-				case 0: trainingData = "2011PhilTrainLong.arff"; break;
-				case 1: trainingData = "2012GuatemalaTrain.arff"; break;
-				case 2: trainingData = "2012ItalyTrain.arff"; break;
-				case 3: trainingData = "2012PhilippineTrain.arff"; break;
-				case 4: trainingData = "2013AlbertaTrain.arff"; break;
-				case 5: trainingData = "2013AustraliaTrain.arff"; break;
-				case 6: trainingData = "2013BostonTrain.arff"; break;
-				case 7: trainingData = "2013ManilaTrain.arff"; break;
-				case 8: trainingData = "2013QueensTrain.arff"; break;
-				case 9: trainingData = "2013YolandaTrain.arff"; break;
-				case 10: trainingData = "2014ChileTrain.arff"; break;
-				case 11: trainingData = "2014HagupitTrain.arff"; break;
-				case 12: trainingData = "2015NepalTrain.arff"; break;
-				case 13: trainingData = "2015ParisTrain.arff"; break;
-				default: trainingData = "2018FloridaTrain.arff"; 
+			case 0: trainingData = "2011PhilTrainLong.arff"; break;
+			case 1: trainingData = "2012GuatemalaTrain.arff"; break;
+			case 2: trainingData = "2012ItalyTrain.arff"; break;
+			case 3: trainingData = "2012PhilippineTrain.arff"; break;
+			case 4: trainingData = "2013AlbertaTrain.arff"; break;
+			case 5: trainingData = "2013AustraliaTrain.arff"; break;
+			case 6: trainingData = "2013BostonTrain.arff"; break;
+			case 7: trainingData = "2013ManilaTrain.arff"; break;
+			case 8: trainingData = "2013QueensTrain.arff"; break;
+			case 9: trainingData = "2013YolandaTrain.arff"; break;
+			case 10: trainingData = "2014ChileTrain.arff"; break;
+			case 11: trainingData = "2014HagupitTrain.arff"; break;
+			case 12: trainingData = "2015NepalTrain.arff"; break;
+			case 13: trainingData = "2015ParisTrain.arff"; break;
+			default: trainingData = "2018FloridaTrain.arff"; 
 			}
-			
+
 			switch (steppingStone)
 			{
-				case 0: testData = "2011PhilTestLong.arff"; break;
-				case 1: testData = "2012GuatemalaTest.arff"; break;
-				case 2: testData = "2012ItalyTest.arff"; break;
-				case 3: testData = "2012PhilippineTest.arff"; break;
-				case 4: testData = "2013AlbertaTest.arff"; break;
-				case 5: testData = "2013AustraliaTest.arff"; break;
-				case 6: testData = "2013BostonTest.arff"; break;
-				case 7: testData = "2013ManilaTest.arff"; break;
-				case 8: testData = "2013QueensTest.arff"; break;
-				case 9: testData = "2013YolandaTest.arff"; break;
-				case 10: testData = "2014ChileTest.arff"; break;
-				case 11: testData = "2014HagupitTest.arff"; break;
-				case 12: testData = "2015NepalTest.arff"; break;
-				case 13: testData = "2015ParisTest.arff"; break;
-				default: testData = "2018FloridaTest.arff"; 
+			case 0: testData = "2011PhilTestLong.arff"; break;
+			case 1: testData = "2012GuatemalaTest.arff"; break;
+			case 2: testData = "2012ItalyTest.arff"; break;
+			case 3: testData = "2012PhilippineTest.arff"; break;
+			case 4: testData = "2013AlbertaTest.arff"; break;
+			case 5: testData = "2013AustraliaTest.arff"; break;
+			case 6: testData = "2013BostonTest.arff"; break;
+			case 7: testData = "2013ManilaTest.arff"; break;
+			case 8: testData = "2013QueensTest.arff"; break;
+			case 9: testData = "2013YolandaTest.arff"; break;
+			case 10: testData = "2014ChileTest.arff"; break;
+			case 11: testData = "2014HagupitTest.arff"; break;
+			case 12: testData = "2015NepalTest.arff"; break;
+			case 13: testData = "2015ParisTest.arff"; break;
+			default: testData = "2018FloridaTest.arff"; 
 			}
-			
+
 			switch (steppingStone)
 			{
-				case 0: resultText = "2011PhilResultsLong.txt"; break;
-				case 1: resultText = "2012GuatemalaResults.txt"; break;
-				case 2: resultText = "2012ItalyResults.txt"; break;
-				case 3: resultText = "2012PhilippineResults.txt"; break;
-				case 4: resultText = "2013AlbertaResults.txt"; break;
-				case 5: resultText = "2013AustraliaResults.txt"; break;
-				case 6: resultText = "2013BostonResults.txt"; break;
-				case 7: resultText = "2013ManilaResults.txt"; break;
-				case 8: resultText = "2013QueensResults.txt"; break;
-				case 9: resultText = "2013YolandaResults.txt"; break;
-				case 10: resultText = "2014ChileResults.txt"; break;
-				case 11: resultText = "2014HagupitResults.txt"; break;
-				case 12: resultText = "2015NepalResults.txt"; break;
-				case 13: resultText = "2015ParisResults.txt"; break;
-				default: resultText = "2018FloridaResults.txt"; 
+			case 0: resultText = "2011PhilResultsLong.txt"; break;
+			case 1: resultText = "2012GuatemalaResults.txt"; break;
+			case 2: resultText = "2012ItalyResults.txt"; break;
+			case 3: resultText = "2012PhilippineResults.txt"; break;
+			case 4: resultText = "2013AlbertaResults.txt"; break;
+			case 5: resultText = "2013AustraliaResults.txt"; break;
+			case 6: resultText = "2013BostonResults.txt"; break;
+			case 7: resultText = "2013ManilaResults.txt"; break;
+			case 8: resultText = "2013QueensResults.txt"; break;
+			case 9: resultText = "2013YolandaResults.txt"; break;
+			case 10: resultText = "2014ChileResults.txt"; break;
+			case 11: resultText = "2014HagupitResults.txt"; break;
+			case 12: resultText = "2015NepalResults.txt"; break;
+			case 13: resultText = "2015ParisResults.txt"; break;
+			default: resultText = "2018FloridaResults.txt"; 
 			}
-			
+
 			ConverterUtils.DataSource  loader1 = new ConverterUtils.DataSource(trainingData);
 			ConverterUtils.DataSource  loader2 = new ConverterUtils.DataSource(testData);
-			
+
 			//ConverterUtils.DataSource  loader1 = new ConverterUtils.DataSource("ContinuingNewsTFIDFTrainPhilippines.arff");
 			//ConverterUtils.DataSource  loader2 = new ConverterUtils.DataSource("ContinuingNewsTFIDFTestPhilippines.arff");
 			try {
